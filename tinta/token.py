@@ -1,5 +1,10 @@
+from typing import NamedTuple
 from dataclasses import dataclass, field
 from enum import Enum
+
+class Position(NamedTuple):
+    line: int
+    column: int
 
 class TokenKind(Enum):
     STRING      = 'string'
@@ -20,5 +25,6 @@ class TokenKind(Enum):
 
 @dataclass
 class Token():
-    kind:  TokenKind
-    value: str       = field(default_factory=str)
+    position: Position
+    kind:     TokenKind
+    value:    str       = field(default_factory=str)

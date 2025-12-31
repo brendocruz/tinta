@@ -1,6 +1,6 @@
 import string
 from tinta.error import LexerError
-from tinta.token import TokenKind, Token
+from tinta.token import TokenKind, Token, Position
 
 class Lexer:
     """A lexer for the Tinta language."""
@@ -55,7 +55,7 @@ class Lexer:
 
         Returns:
             bool: `True` if the character is an ASCII letter or a digit,
-            `False` otherwise.
+                `False` otherwise.
         """
         return self.is_ascii_letter(char) or char == '_'
 
@@ -68,7 +68,7 @@ class Lexer:
 
         Returns:
             bool: `True` if the character is an ASCII letter, a digit or an
-            underscore, `False` otherwise.
+                underscore, `False` otherwise.
         """
         return self.is_ascii_letter_or_underscore(char) or self.is_digit(char)
 
@@ -81,7 +81,7 @@ class Lexer:
 
         Returns:
             bool: `True` if the character is an ASCII letter, a digit, an
-            underscore or a hyphen, `False` otherwise.
+                underscore or a hyphen, `False` otherwise.
         """
         return self.is_ascii_letter_digit_or_underscore(char) or char == '-'
 
@@ -101,15 +101,15 @@ class Lexer:
         """
         return self._offset
 
-    def get_position(self) -> tuple[int, int]:
+    def get_position(self) -> Position:
         """Returns the current position (i.e. line and column numbers) in the
         stream input.
 
         Returns:
-            tuple[int, int]: A tuple containing the current line and the column,
-            respectively, both starting from 1.
+            Position: A `Position` object containing the current line and the 
+            column, respectively, both starting from 1.
         """
-        return (self._line, self._column)
+        return Position(self._line, self._column)
 
     def peek_char(self) -> str:
         """Returns the character at the current offset without consuming it.
@@ -138,13 +138,13 @@ class Lexer:
         """Consumes the character at the current offset and advances both the
         offset and stream position.
         """
-        self._offset += 1
-        self._column += 1
-
         if self._offset < self._length:
             if self._stream[self._offset] == '\n':
                 self._line += 1
-                self._column = 1
+                self._column = 0
+            self._offset += 1
+            self._column += 1
+
 
     def next_char(self) -> str:
         """Returns the character at the current offset and advances both the
@@ -191,13 +191,15 @@ class Lexer:
         """
         chars: list[str] = []
 
+        position  = self.get_position()
         next_char = self.next_char()
+
         if self.is_digit(next_char):
             message = f'Identifiers cannot start with a digit `{next_char}`'
-            raise LexerError(message, self._line, self._column)
+            raise LexerError(message, position)
         if next_char == '-':
             message = f'Identifiers cannot start with a hyphen `{next_char}`'
-            raise LexerError(message, self._line, self._column)
+            raise LexerError(message, position)
 
         chars.append(next_char)
 
@@ -210,7 +212,7 @@ class Lexer:
                     chars.append(lookahead1)
                 else:
                     message = f'Identifiers cannot end with a hyphen `{lookahead1}`'
-                    raise LexerError(message, self._line, self._column)
+                    raise LexerError(message, position)
                 continue
             if self.is_ascii_letter_digit_or_underscore(lookahead1):
                 self.pop_char()
@@ -219,7 +221,7 @@ class Lexer:
             break
 
         token_value = ''.join(chars)
-        return Token(TokenKind.IDENTIFIER, token_value)
+        return Token(position, TokenKind.IDENTIFIER, token_value)
 
     def read_escape_char(self) -> str:
         """Scans and returns the escaped character of an escape sequence.
@@ -241,14 +243,16 @@ class Lexer:
                   finding the expected escape character).
                 - If the sequence is not a valid escape sequence.
         """
+        position  = self.get_position()
         next_char = self.next_char()
+
         if next_char != '\\':
             message = f'Expected `\\`, but found `{next_char}'
-            raise LexerError(message, self._line, self._column)
+            raise LexerError(message, position)
 
         if self.at_eof():
             message = 'Unterminated escape sequence at EOF'
-            raise LexerError(message, self._line, self._column)
+            raise LexerError(message, position)
 
         next_char = self.next_char()
         if next_char == '\\':
@@ -261,7 +265,7 @@ class Lexer:
             return '\r'
 
         message = 'Invalid escape sequence `\\{next_char}`'
-        raise LexerError(message, self._line, self._column)
+        raise LexerError(message, position)
 
     def read_string(self) -> Token:
         """Scans and returns a string literal token.
@@ -282,10 +286,12 @@ class Lexer:
         """
         chars: list[str] = []
 
+        position  = self.get_position()
         next_char = self.next_char()
+
         if next_char != '"':
             message = 'Expected `"`, but found `{next_char}`'
-            raise LexerError(message, self._line, self._column)
+            raise LexerError(message, position)
 
         while not self.at_eof():
             lookahead = self.peek_char()
@@ -300,12 +306,12 @@ class Lexer:
 
         if self.at_eof():
             message = 'Unterminated string: expected `\"`, but found EOF'
-            raise LexerError(message, self._line, self._column)
+            raise LexerError(message, position)
 
         self.pop_char()
 
         token_value = ''.join(chars)
-        return Token(TokenKind.STRING, token_value)
+        return Token(position, TokenKind.STRING, token_value)
 
     def read_comment(self) -> Token:
         """Scans and returns a comment token.
@@ -323,15 +329,17 @@ class Lexer:
         """
         chars: list[str] = []
 
+        position  = self.get_position()
         next_char = self.next_char()
+
         if next_char != '-':
             message = f'Expected `-`, but found `{next_char}'
-            raise LexerError(message, self._line, self._column)
+            raise LexerError(message, position)
 
         next_char = self.next_char()
         if next_char != '-':
             message = f'Expected `-`, but found `{next_char}'
-            raise LexerError(message, self._line, self._column)
+            raise LexerError(message, position)
 
         while not self.at_eof():
             next_char = self.next_char()
@@ -340,32 +348,33 @@ class Lexer:
             chars.append(next_char)
 
         token_value = ''.join(chars)
-        return Token(TokenKind.COMMENT, token_value)
+        return Token(position, TokenKind.COMMENT, token_value)
 
     def read_symbol(self) -> Token:
+        position  = self.get_position()
         next_char = self.next_char()
 
         if next_char == '.':
-            return Token(TokenKind.DOT)
+            return Token(position, TokenKind.DOT)
         if next_char == '@':
-            return Token(TokenKind.AT_SIGN)
+            return Token(position, TokenKind.AT_SIGN)
         if next_char == '#':
-            return Token(TokenKind.HASH_SIGN)
+            return Token(position, TokenKind.HASH_SIGN)
         if next_char == '$':
-            return Token(TokenKind.DOLLAR_SIGN)
+            return Token(position, TokenKind.DOLLAR_SIGN)
         if next_char == '*':
-            return Token(TokenKind.ASTERISK)
+            return Token(position, TokenKind.ASTERISK)
         if next_char == ':':
-            return Token(TokenKind.COLON)
+            return Token(position, TokenKind.COLON)
         if next_char == ';':
-            return Token(TokenKind.SEMICOLON)
+            return Token(position, TokenKind.SEMICOLON)
         if next_char == '{':
-            return Token(TokenKind.LEFT_BRACE)
+            return Token(position, TokenKind.LEFT_BRACE)
         if next_char == '}':
-            return Token(TokenKind.RIGHT_BRACE)
+            return Token(position, TokenKind.RIGHT_BRACE)
 
         message = f'Unexpected character `{next_char}`'
-        raise LexerError(message, self._line, self._column)
+        raise LexerError(message, position)
 
     def read_next_token(self) -> Token:
         """Reads the stream and returns the next recognized token.
@@ -377,8 +386,9 @@ class Lexer:
         Raises:
             LexerError: If the input cannot be recognized as a valid token.
         """
+        position = self.get_position()
         if self.at_eof():
-            return Token(TokenKind.EOF)
+            return Token(position, TokenKind.EOF)
 
         lookahead = self.peek_char()
         if self.is_ascii_letter_or_underscore(lookahead):
@@ -394,4 +404,4 @@ class Lexer:
             return self.read_symbol()
 
         message = f'Unexpected character `{lookahead}`'
-        raise LexerError(message, self._line, self._column)
+        raise LexerError(message, position)

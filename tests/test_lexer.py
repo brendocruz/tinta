@@ -2,7 +2,7 @@ import pytest
 from pytest import param, mark
 from tinta.lexer import Lexer
 from tinta.error import LexerError
-from tinta.token import Token, TokenKind
+from tinta.token import Token, TokenKind, Position
 
 parametrize = mark.parametrize
 
@@ -105,47 +105,52 @@ def test_pop_char_advances_stream_offset_and_position():
     stream = 'ab\ncd\nef'
     lexer  = Lexer(stream)
 
-    expected = [(1, 1), 0]
+    expected = [Position(1, 1), 0]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
     lexer.pop_char()
-    expected = [(1, 2), 1]
+    expected = [Position(1, 2), 1]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
     lexer.pop_char()
-    expected = [(2, 1), 2]
+    expected = [Position(1, 3), 2]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
     lexer.pop_char()
-    expected = [(2, 2), 3]
+    expected = [Position(2, 1), 3]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
     lexer.pop_char()
-    expected = [(2, 3), 4]
+    expected = [Position(2, 2), 4]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
     lexer.pop_char()
-    expected = [(3, 1), 5]
+    expected = [Position(2, 3), 5]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
     lexer.pop_char()
-    expected = [(3, 2), 6]
+    expected = [Position(3, 1), 6]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
     lexer.pop_char()
-    expected = [(3, 3), 7]
+    expected = [Position(3, 2), 7]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
     lexer.pop_char()
-    expected = [(3, 4), 8]
+    expected = [Position(3, 3), 8]
+    observed = [lexer.get_position(), lexer.get_offset()]
+    assert expected == observed
+
+    lexer.pop_char()
+    expected = [Position(3, 3), 8]
     observed = [lexer.get_position(), lexer.get_offset()]
     assert expected == observed
 
@@ -221,7 +226,8 @@ def test_read_identifier_returns_token_at_stream_boundary():
     stream = 'verbo@'
     lexer  = Lexer(stream)
 
-    expected = Token(TokenKind.IDENTIFIER, 'verbo')
+    position = Position(1, 1)
+    expected = Token(position, TokenKind.IDENTIFIER, 'verbo')
     observed = lexer.read_identifier()
     assert expected == observed
 
@@ -232,7 +238,8 @@ def test_read_identifier_returns_token_at_stream_boundary():
               param('o1adjunto1',        id='from_stream_including_digits'),])
 def test_read_identifier_returns_token(stream):
     lexer    = Lexer(stream)
-    expected = Token(TokenKind.IDENTIFIER, stream)
+    position = Position(1, 1)
+    expected = Token(position, TokenKind.IDENTIFIER, stream)
     observed = lexer.read_identifier()
     assert expected == observed
 
@@ -257,7 +264,8 @@ def test_read_identifier_raises_error(stream):
               param('}', TokenKind.RIGHT_BRACE, id='from_stream_of_right_brace'),])
 def test_read_symbol_returns_token(stream, expected):
     lexer    = Lexer(stream)
-    expected = Token(expected)
+    position = Position(1, 1)
+    expected = Token(position, expected)
     observed = lexer.read_symbol()
     assert expected == observed
 
@@ -303,7 +311,8 @@ def test_read_string_returns_token_without_escape_sequence():
     stream = '"Amor é fogo"'
     lexer  = Lexer(stream)
 
-    expected = Token(TokenKind.STRING, 'Amor é fogo')
+    position = Position(1, 1)
+    expected = Token(position, TokenKind.STRING, 'Amor é fogo')
     observed = lexer.read_string()
     assert expected == observed
 
@@ -311,7 +320,8 @@ def test_read_string_returns_token_with_escape_sequence():
     stream = '"Amor\\té fogo\\n"'
     lexer  = Lexer(stream)
 
-    expected = Token(TokenKind.STRING, 'Amor\té fogo\n')
+    position = Position(1, 1)
+    expected = Token(position, TokenKind.STRING, 'Amor\té fogo\n')
     observed = lexer.read_string()
     assert expected == observed
 
@@ -333,7 +343,8 @@ def test_read_comment_returns_token_at_eof():
     stream = '-- This is a comment.'
     lexer  = Lexer(stream)
 
-    expected = Token(TokenKind.COMMENT, ' This is a comment.')
+    position = Position(1, 1)
+    expected = Token(position, TokenKind.COMMENT, ' This is a comment.')
     observed = lexer.read_comment()
     assert expected == observed
 
@@ -341,7 +352,8 @@ def test_read_comment_returns_token_terminated_by_newline():
     stream = '-- This is a comment.\n'
     lexer  = Lexer(stream)
 
-    expected = Token(TokenKind.COMMENT, ' This is a comment.')
+    position = Position(1, 1)
+    expected = Token(position, TokenKind.COMMENT, ' This is a comment.')
     observed = lexer.read_comment()
     assert expected == observed
 
@@ -363,27 +375,33 @@ def test_read_next_token_returns_expected_token_kinds():
     stream = ('-- This is a comment.\n' 'sujeito: "Eu";')
     lexer  = Lexer(stream)
 
-    expected = Token(TokenKind.COMMENT, ' This is a comment.')
+    position = Position(1, 1)
+    expected = Token(position, TokenKind.COMMENT, ' This is a comment.')
     observed = lexer.read_next_token()
     assert expected == observed
 
-    expected = Token(TokenKind.IDENTIFIER, 'sujeito')
+    position = Position(2, 1)
+    expected = Token(position, TokenKind.IDENTIFIER, 'sujeito')
     observed = lexer.read_next_token()
     assert expected == observed
 
-    expected = Token(TokenKind.COLON)
+    position = Position(2, 8)
+    expected = Token(position, TokenKind.COLON)
     observed = lexer.read_next_token()
     assert expected == observed
 
-    expected = Token(TokenKind.STRING, 'Eu')
+    position = Position(2, 10)
+    expected = Token(position, TokenKind.STRING, 'Eu')
     observed = lexer.read_next_token()
     assert expected == observed
 
-    expected = Token(TokenKind.SEMICOLON)
+    position = Position(2, 14)
+    expected = Token(position, TokenKind.SEMICOLON)
     observed = lexer.read_next_token()
     assert expected == observed
 
-    expected = Token(TokenKind.EOF)
+    position = Position(2, 15)
+    expected = Token(position, TokenKind.EOF)
     observed = lexer.read_next_token()
     assert expected == observed
 
