@@ -7,10 +7,10 @@ line-comment     = "--" , { character - EOL } , ( EOL | EOF )
 
 block            = standard-block | shorthand-block
 standard-block   = block-header , "{" , { statement } , "}"
-shorthand-block  = block-header , ":" , text-node , ";"
+shorthand-block  = block-header , ":" , text-fragment , ";"
 
-block-header     = block-type-chain , [ block-label ]
-block-label      = { group-label | anchor-label | link-label }
+block-header     = block-type-chain , block-label 
+block-label      = [ group-label ] , [ anchor-label ] , [ link-label ]
 block-type-chain = block-type , { "." , block-type }
 block-type       = identifier
 
@@ -18,8 +18,8 @@ group-label      = "@" , identifier
 anchor-label     = "#" , identifier
 link-label       = "$" , identifier
 
-text-node        = [ "*" ] , string , [ "*" ]
-string           = '"' , { string-character } , '"'
+text-fragment    = [ "*" ] , string-literal , [ "*" ]
+string-literal   = '"' , { string-character } , '"'
 string-character = escape-sequence | ( character  - '"' - "\\" )
 escape-sequence  = "\\" ( '"' | "\\" | "n" | "r" | "t" )
 identifier       = letter , { letter | digit | "_" | "-" } ,

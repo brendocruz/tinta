@@ -13,6 +13,16 @@ class LexerError(Exception):
     position: Position
 
     def __init__(self, message: str, position: Position):
-        self.message = message
+        self.message  = message
         self.position = position
         super().__init__(f'{message} at line {position.line}, column {position.column}')
+
+
+class ParserError(Exception):
+    message:  str
+    position: Position
+
+    def __init__(self, message: str, position: Position):
+       self.message  = message
+       self.position = position
+       super().__init__(f'{message} at line {position.line}, column {position.column}')
