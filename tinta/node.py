@@ -1,3 +1,4 @@
+from weakref import ref, ReferenceType
 from dataclasses import dataclass, field
 from typing import Optional
 from tinta.token import Position
@@ -10,6 +11,21 @@ class Node:
         position (Position): The start location in the source code.
     """
     position: Position
+
+    _parent_ref: Optional[ReferenceType['Node']] = field(init=False,
+                                                         repr=False,
+                                                         default=None,
+                                                         compare=False)
+
+    @property
+    def parent(self):
+        if self._parent_ref:
+            return self._parent_ref()
+        return None
+
+    @parent.setter
+    def parent(self, value: 'Node') -> None:
+        self._parent_ref = ref(value)
 
 @dataclass
 class IdentifierNode(Node):

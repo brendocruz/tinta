@@ -146,7 +146,9 @@ class Parser:
             trim_right = True
             self.pop_token()
 
-        return n.TextFragmentNode(position, string_node, trim_left, trim_right)
+        node = n.TextFragmentNode(position, string_node, trim_left, trim_right)
+        string_node.parent = node
+        return node
 
     def parse_group_label(self) -> n.GroupLabelNode:
         """Parses a group label from the input stream.
@@ -161,7 +163,10 @@ class Parser:
         token     = self.expect(TokenKind.AT_SIGN)
         position  = token.position
         name_node = self.parse_identifier()
-        return n.GroupLabelNode(position, name_node)
+
+        group_node = n.GroupLabelNode(position, name_node)
+        name_node.parent = group_node
+        return group_node
 
     def parse_anchor_label(self) -> n.AnchorLabelNode:
         """Parses an anchor label from the input stream.
@@ -176,7 +181,10 @@ class Parser:
         token     = self.expect(TokenKind.HASH_SIGN)
         position  = token.position
         name_node = self.parse_identifier()
-        return n.AnchorLabelNode(position, name_node)
+
+        anchor_node = n.AnchorLabelNode(position, name_node)
+        name_node.parent = anchor_node
+        return anchor_node
 
     def parse_link_label(self) -> n.LinkLabelNode:
         """Parses a link label from the input stream.
@@ -191,7 +199,10 @@ class Parser:
         token     = self.expect(TokenKind.DOLLAR_SIGN)
         position  = token.position
         name_node = self.parse_identifier()
-        return n.LinkLabelNode(position, name_node)
+
+        link_node = n.LinkLabelNode(position, name_node)
+        name_node.parent = link_node
+        return link_node
 
     def parse_shorthand_block_body(self) -> list[n.StatementNode]:
         """Parses a shorthand block body from the input stream.
@@ -266,26 +277,30 @@ class Parser:
             block_node.body.append(block_body)
             return block_node
 
-        group_label: Optional[n.GroupLabelNode] = None
+        block_node = n.BlockNode(position, kind=block_type)
+        block_type.parent = block_node
+
         if self.check(TokenKind.AT_SIGN):
             group_label = self.parse_group_label()
+            block_node.group = group_label
+            group_label.parent = block_node
 
-        anchor_label: Optional[n.AnchorLabelNode] = None
         if self.check(TokenKind.HASH_SIGN):
             anchor_label = self.parse_anchor_label()
+            block_node.anchor = anchor_label
+            anchor_label.parent = block_node
 
-        link_label: Optional[n.LinkLabelNode] = None
         if self.check(TokenKind.DOLLAR_SIGN):
             link_label = self.parse_link_label()
+            block_node.link = link_label
+            link_label.parent = block_node
 
         block_body = self.parse_block_body()
+        for statement in block_body:
+            statement.parent = block_node
+        block_node.body = block_body
 
-        return n.BlockNode(position,
-                           kind=block_type,
-                           group=group_label,
-                           anchor=anchor_label,
-                           link=link_label,
-                           body=block_body)
+        return block_node
 
     def parse_statement(self) -> n.StatementNode:
         """Parses a statement from the input stream.
@@ -329,7 +344,10 @@ class Parser:
         if len(body) > 0:
             position = body[0].position
 
-        return n.ProgramNode(position, body)
+        program_node = n.ProgramNode(position, body)
+        for statement in body:
+            statement.parent = program_node
+        return program_node
 
     def parse(self) -> n.ProgramNode:
         """Parses the entire input stream.

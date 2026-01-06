@@ -154,6 +154,7 @@ def test_parse_text_fragment_returns_node_with_left_strip():
     expected = n.TextFragmentNode(position, string_node, strip_left, strip_right)
     observed = parser.parse_text_fragment()
     assert expected == observed
+    assert observed.content.parent is observed
 
 def test_parse_text_fragment_returns_node_with_right_strip():
     stream = '"azul"*'
@@ -169,6 +170,7 @@ def test_parse_text_fragment_returns_node_with_right_strip():
     expected = n.TextFragmentNode(position, string_node, strip_left, strip_right)
     observed = parser.parse_text_fragment()
     assert expected == observed
+    assert observed.content.parent is observed
 
 def test_parse_text_fragment_returns_node_with_left_and_right_strip():
     stream = '*"azul"*'
@@ -184,6 +186,7 @@ def test_parse_text_fragment_returns_node_with_left_and_right_strip():
     expected = n.TextFragmentNode(position, string_node, strip_left, strip_right)
     observed = parser.parse_text_fragment()
     assert expected == observed
+    assert observed.content.parent is observed
 
 def test_parse_group_label_returns_node():
     stream = '@group1'
@@ -197,6 +200,7 @@ def test_parse_group_label_returns_node():
     expected = n.GroupLabelNode(position, name)
     observed = parser.parse_group_label()
     assert expected == observed
+    assert observed.name.parent is observed
 
 def test_parse_anchor_label_returns_node():
     stream = '#group1'
@@ -210,6 +214,7 @@ def test_parse_anchor_label_returns_node():
     expected = n.AnchorLabelNode(position, name)
     observed = parser.parse_anchor_label()
     assert expected == observed
+    assert observed.name.parent is observed
 
 def test_parse_link_label_returns_node():
     stream = '$group1'
@@ -223,6 +228,7 @@ def test_parse_link_label_returns_node():
     expected = n.LinkLabelNode(position, name)
     observed = parser.parse_link_label()
     assert expected == observed
+    assert observed.name.parent is observed
 
 def test_parse_shorthand_block_body_returns_statements():
     stream = ': "o livro";'
@@ -304,30 +310,57 @@ def test_parse_block_returns_node_from_qualified_syntax():
     assert type(observed_z) is n.BlockNode
     assert 'z' == observed_z.kind.value
     assert   1 == len(observed_z.body)
+    assert type(observed_z.body[0]) is n.TextFragmentNode
+    assert observed_z.body[0].parent is observed_z
+    
+def test_parse_block_returns_node_without_optional_labels():
+    stream = 'pred { "falam" }'
+    lexer  = Lexer(stream)
+    parser = Parser(lexer)
 
-    observed_text = observed_z.body[0]
-    assert type(observed_text) is n.TextFragmentNode
+    expected_type = 'pred'
+    observed = parser.parse_block()
+    assert type(observed) is n.BlockNode
+    assert expected_type == observed.kind.value
+    assert observed.kind.parent is observed
+
+    assert observed.group is None
+    assert observed.anchor is None
+    assert observed.link is None
+
+    assert 1 == len(observed.body)
+    assert type(observed.body[0]) is n.TextFragmentNode
+    assert observed.body[0].parent is observed
     
 def test_parse_block_returns_node_with_all_optional_labels():
     stream = 'pred @group1 #ref1 $ref2 { "falam" }'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
+    expected_type = 'pred'
     observed = parser.parse_block()
     assert type(observed) is n.BlockNode
-    assert "pred" == observed.kind.value
+    assert expected_type == observed.kind.value
+    assert observed.kind.parent is observed
 
-    expected_group = "group1"
+    expected_group = 'group1'
     assert observed.group is not None
     assert expected_group == observed.group.name.value
+    assert observed.group.parent is observed
 
-    expected_anchor = "ref1"
+    expected_anchor = 'ref1'
     assert observed.anchor is not None
     assert expected_anchor == observed.anchor.name.value
+    assert observed.anchor.parent is observed
 
-    expected_link = "ref2"
+    expected_link = 'ref2'
     assert observed.link is not None
     assert expected_link == observed.link.name.value
+    assert observed.link.parent is observed
+
+    assert 1 == len(observed.body)
+    assert type(observed.body[0]) is n.TextFragmentNode
+    assert observed.body[0].parent is observed
 
 @parametrize('stream,expected',
              [param('-- Comment.', n.CommentNode,      id='from_comment'),
@@ -360,6 +393,7 @@ def test_parse_program_returns_node():
 
     observed_block = observed_program.body[0]
     assert type(observed_block) is n.BlockNode
+    assert observed_block.parent is observed_program
 
 def test_parse_returns_program_node():
     stream = 'x { }'
@@ -372,3 +406,4 @@ def test_parse_returns_program_node():
 
     observed_block = observed_program.body[0]
     assert type(observed_block) is n.BlockNode
+    assert observed_block.parent is observed_program
