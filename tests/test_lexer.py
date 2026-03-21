@@ -339,22 +339,22 @@ def test_read_string_raises_error_on_missing_closing_quote():
     with pytest.raises(LexerError):
         lexer.read_string()
 
-def test_read_comment_returns_token_at_eof():
+def test_skip_comment_consumes_comment_at_eof():
     stream = '-- This is a comment.'
     lexer  = Lexer(stream)
+    lexer.skip_comment()
 
-    position = Position(1, 1)
-    expected = Token(position, TokenKind.COMMENT, ' This is a comment.')
-    observed = lexer.read_comment()
+    expected = True
+    observed = lexer.at_eof()
     assert expected == observed
 
-def test_read_comment_returns_token_terminated_by_newline():
+def test_skip_comment_consumes_comment_terminated_by_newline():
     stream = '-- This is a comment.\n'
     lexer  = Lexer(stream)
+    lexer.skip_comment()
 
-    position = Position(1, 1)
-    expected = Token(position, TokenKind.COMMENT, ' This is a comment.')
-    observed = lexer.read_comment()
+    expected = True
+    observed = lexer.at_eof()
     assert expected == observed
 
 def test_read_comment_raises_error_on_missing_first_hyphen():
@@ -362,23 +362,18 @@ def test_read_comment_raises_error_on_missing_first_hyphen():
     lexer  = Lexer(stream)
 
     with pytest.raises(LexerError):
-        lexer.read_comment()
+        lexer.skip_comment()
 
 def test_read_comment_missing_second_hyphen():
     stream = '- This is a comment.'
     lexer  = Lexer(stream)
 
     with pytest.raises(LexerError):
-        lexer.read_comment()
+        lexer.skip_comment()
 
 def test_read_next_token_returns_expected_token_kinds():
     stream = ('-- This is a comment.\n' 'sujeito: "Eu";')
     lexer  = Lexer(stream)
-
-    position = Position(1, 1)
-    expected = Token(position, TokenKind.COMMENT, ' This is a comment.')
-    observed = lexer.read_next_token()
-    assert expected == observed
 
     position = Position(2, 1)
     expected = Token(position, TokenKind.IDENTIFIER, 'sujeito')

@@ -9,7 +9,6 @@ class Position(NamedTuple):
 class TokenKind(Enum):
     STRING      = 'string'
     IDENTIFIER  = 'identifier'
-    COMMENT     = 'comment'
 
     DOT         = '.'
     AT_SIGN     = '@'

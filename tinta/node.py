@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from typing import Optional
 from tinta.token import Position
 
-@dataclass
-class Node:
+@dataclass(eq=False)
+class Node[T: 'Node']:
     """Base class for all nodes.
 
     Attributes:
@@ -12,22 +12,25 @@ class Node:
     """
     position: Position
 
-    _parent_ref: Optional[ReferenceType['Node']] = field(init=False,
-                                                         repr=False,
-                                                         default=None,
-                                                         compare=False)
+    _parent_ref: Optional[ReferenceType[T]] = field(init=False,
+                                                    repr=False,
+                                                    default=None,
+                                                    compare=False)
 
     @property
-    def parent(self):
+    def parent(self) -> T | None:
         if self._parent_ref:
             return self._parent_ref()
         return None
 
     @parent.setter
-    def parent(self, value: 'Node') -> None:
-        self._parent_ref = ref(value)
+    def parent(self, value: Optional[T]) -> None:
+        if value is None:
+            self._parent_ref = None
+        else:
+            self._parent_ref = ref(value)
 
-@dataclass
+@dataclass(eq=False)
 class IdentifierNode(Node):
     """A node for an identifier.
 
@@ -36,7 +39,7 @@ class IdentifierNode(Node):
     """
     value: str
 
-@dataclass
+@dataclass(eq=False)
 class StringLiteralNode(Node):
     """A node for a string literal.
 
@@ -45,7 +48,7 @@ class StringLiteralNode(Node):
     """
     value: str
 
-@dataclass
+@dataclass(eq=False)
 class LabelNode(Node):
     """A node for a label.
     
@@ -54,36 +57,52 @@ class LabelNode(Node):
     """
     name: IdentifierNode
 
-@dataclass
+@dataclass(eq=False)
 class GroupLabelNode(LabelNode):
     """A node for a group label."""
     pass
 
-@dataclass
+@dataclass(eq=False)
 class AnchorLabelNode(LabelNode):
     """A node for an anchor label."""
     pass
 
-@dataclass
+@dataclass(eq=False)
 class LinkLabelNode(LabelNode):
     """A node for a link label."""
     pass
 
-@dataclass
-class StatementNode(Node):
+@dataclass(eq=False)
+class StatementNode(Node['StatementWithBodyNode']):
     """A node for a statement"""
     pass
 
-@dataclass
-class CommentNode(StatementNode):
-    """A node for a comment.
+@dataclass(eq=False, kw_only=True)
+class StatementWithBodyNode(StatementNode):
+    """A node for a statement with a body attribute.
 
     Attributes:
-        content (str): The text content of the comment.
+        body (list[StatementNode]): The list of statements contained within the
+            block.
     """
-    content: str
+    body: list[StatementNode] = field(default_factory=list)
 
-@dataclass
+    # TODO: add docstring.
+    def add(self, node: StatementNode):
+        self.body.append(node)
+        node.parent = self
+
+    # TODO: add docstring.
+    def remove(self, node: StatementNode):
+        self.body.remove(node)
+        node.parent = None
+
+    # TODO: add docstring.
+    def insert(self, index: int, node: StatementNode):
+        self.body.insert(index, node)
+        node.parent = self
+
+@dataclass(eq=False)
 class TextFragmentNode(StatementNode):
     """A node for a text fragment.
 
@@ -96,8 +115,8 @@ class TextFragmentNode(StatementNode):
     strip_left:        bool = False
     strip_right:       bool = False
 
-@dataclass
-class BlockNode(StatementNode):
+@dataclass(eq=False)
+class BlockNode(StatementWithBodyNode):
     """A node for a block.
 
     Attributes:
@@ -112,14 +131,13 @@ class BlockNode(StatementNode):
     group:   Optional[GroupLabelNode] = None
     anchor: Optional[AnchorLabelNode] = None
     link:     Optional[LinkLabelNode] = None
-    body:         list[StatementNode] = field(default_factory=list)
 
-@dataclass
-class ProgramNode(Node):
-    """A node for a whole program.
+@dataclass(eq=False)
+class ProgramNode(StatementWithBodyNode):
+    """A node for a whole program."""
+    pass
 
-    Attributes:
-        body (list[StatementNode]): The list of statements that make up the
-            program.
-    """
-    body: list[StatementNode] = field(default_factory=list)
+@dataclass(eq=False)
+class SpacerNode(StatementNode):
+    """A node for a text spacer."""
+    pass

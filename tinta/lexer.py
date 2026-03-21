@@ -173,6 +173,30 @@ class Lexer:
                 continue
             break
 
+    def skip_comment(self) -> None:
+        """Consumes a single-line comment from the current offset.
+
+        A comment is a sequence of characters starting with two hyphens (`--`),
+        followed by any combination of characters, and ending with a newline
+        (`\\n`) or the end of the file (`EOF`).
+        """
+        position  = self.get_position()
+        next_char = self.next_char()
+
+        if next_char != '-':
+            message = f'Expected `-`, but found `{next_char}'
+            raise LexerError(message, position)
+
+        next_char = self.next_char()
+        if next_char != '-':
+            message = f'Expected `-`, but found `{next_char}'
+            raise LexerError(message, position)
+
+        while not self.at_eof():
+            next_char = self.next_char()
+            if next_char == '\n':
+                break
+
     def read_identifier(self) -> Token:
         """Scans and returns an identifier token.
 
@@ -313,43 +337,6 @@ class Lexer:
         token_value = ''.join(chars)
         return Token(position, TokenKind.STRING, token_value)
 
-    def read_comment(self) -> Token:
-        """Scans and returns a comment token.
-
-        A comment is a sequence of characters starting with two hyphens (`--`),
-        followed by any combination of characters, and ending with a newline
-        (`\\n`) or the end of the file (`EOF`).
-
-        Returns:
-            Token: a `Token` object of kind `COMMENT` containing the comment's
-            value.
-
-        Raises:
-            LexerError: if the comment does not start with two hyphens.
-        """
-        chars: list[str] = []
-
-        position  = self.get_position()
-        next_char = self.next_char()
-
-        if next_char != '-':
-            message = f'Expected `-`, but found `{next_char}'
-            raise LexerError(message, position)
-
-        next_char = self.next_char()
-        if next_char != '-':
-            message = f'Expected `-`, but found `{next_char}'
-            raise LexerError(message, position)
-
-        while not self.at_eof():
-            next_char = self.next_char()
-            if next_char == '\n':
-                break
-            chars.append(next_char)
-
-        token_value = ''.join(chars)
-        return Token(position, TokenKind.COMMENT, token_value)
-
     def read_symbol(self) -> Token:
         position  = self.get_position()
         next_char = self.next_char()
@@ -394,7 +381,8 @@ class Lexer:
         if self.is_ascii_letter_or_underscore(lookahead):
             return self.read_identifier()
         if lookahead == '-':
-            return self.read_comment()
+            self.skip_comment()
+            return self.read_next_token()
         if lookahead == '"':
             return self.read_string()
         if lookahead.isspace():

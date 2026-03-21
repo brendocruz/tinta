@@ -5,7 +5,7 @@ from tinta.error import ParserError
 from tinta import node as n
 
 class Parser:
-    """A lexer for the Tinta language."""
+    """A parser for the Tinta language."""
     lexer:          Lexer
     _current_token: Token
 
@@ -104,18 +104,6 @@ class Parser:
         """
         token = self.expect(TokenKind.STRING)
         return n.StringLiteralNode(token.position, token.value)
-
-    def parse_comment(self) -> n.CommentNode:
-        """Parses a comment node from the input stream.
-
-        Returns:
-            CommentNode: The parsed comment node.
-
-        Raises:
-            ParserError: If the next token is not a comment.
-        """
-        token = self.expect(TokenKind.COMMENT)
-        return n.CommentNode(token.position, token.value)
 
     def parse_text_fragment(self) -> n.TextFragmentNode:
         """Parses a text fragment from the input stream.
@@ -312,8 +300,6 @@ class Parser:
             ParserError: If the next tokens do not form a valid statement
             (e.g., containing unexpected tokens or syntax errors).
         """
-        if self.check(TokenKind.COMMENT):
-            return self.parse_comment()
         if self.check(TokenKind.STRING):
             return self.parse_text_fragment()
         if self.check(TokenKind.ASTERISK):
@@ -344,7 +330,7 @@ class Parser:
         if len(body) > 0:
             position = body[0].position
 
-        program_node = n.ProgramNode(position, body)
+        program_node = n.ProgramNode(position, body=body)
         for statement in body:
             statement.parent = program_node
         return program_node

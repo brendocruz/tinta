@@ -100,135 +100,151 @@ def test_parse_identifier_returns_node():
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    position = Position(1, 1)
-    expected = n.IdentifierNode(position, 'paragrafo')
+    expected_position = Position(1, 1)
+    expected_value    = 'paragrafo'
+
     observed = parser.parse_identifier()
-    assert expected == observed
+    assert expected_position == observed.position
+    assert expected_value    == observed.value
 
 def test_parse_string_literal_returns_node():
     stream = '"rápido"'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    position = Position(1, 1)
-    expected = n.StringLiteralNode(position, 'rápido')
+    expected_position = Position(1, 1)
+    expected_value    = 'rápido'
+
     observed = parser.parse_string_literal()
-    assert expected == observed
-
-def test_parse_comment_returns_node():
-    stream = '-- This is a comment.\n'
-    lexer  = Lexer(stream)
-    parser = Parser(lexer)
-
-    position = Position(1, 1)
-    expected = n.CommentNode(position, ' This is a comment.')
-    observed = parser.parse_comment()
-    assert expected == observed
+    assert expected_position == observed.position
+    assert expected_value    == observed.value
 
 def test_parse_text_fragment_returns_node_without_strip():
     stream = '"azul"'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    strip_left  = False
-    strip_right = False
-    position    = Position(1, 1)
-    string_node = n.StringLiteralNode(position, 'azul')
+    expected_position        = Position(1, 1)
+    expected_strip_left      = False
+    expected_strip_right     = False
+    expected_string_value    = 'azul'
+    expected_string_position = Position(1, 1)
 
-    position = Position(1, 1)
-    expected = n.TextFragmentNode(position, string_node, strip_left, strip_right)
     observed = parser.parse_text_fragment()
-    assert expected == observed
+    assert expected_position        == observed.position
+    assert expected_strip_left      == observed.strip_left
+    assert expected_strip_right     == observed.strip_right
+    assert observed.content.parent is observed
+    assert expected_string_value    == observed.content.value
+    assert expected_string_position == observed.content.position
 
 def test_parse_text_fragment_returns_node_with_left_strip():
     stream = '*"azul"'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    strip_left  = True
-    strip_right = False
-    position    = Position(1, 2)
-    string_node = n.StringLiteralNode(position, 'azul')
+    expected_position        = Position(1, 1)
+    expected_strip_left      = True
+    expected_strip_right     = False
+    expected_string_value    = 'azul'
+    expected_string_position = Position(1, 2)
 
-    position = Position(1, 1)
-    expected = n.TextFragmentNode(position, string_node, strip_left, strip_right)
     observed = parser.parse_text_fragment()
-    assert expected == observed
+    assert expected_position        == observed.position
+    assert expected_strip_left      == observed.strip_left
+    assert expected_strip_right     == observed.strip_right
     assert observed.content.parent is observed
+    assert expected_string_value    == observed.content.value
+    assert expected_string_position == observed.content.position
 
 def test_parse_text_fragment_returns_node_with_right_strip():
     stream = '"azul"*'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    strip_left  = False
-    strip_right = True
-    position   = Position(1, 1)
-    string_node = n.StringLiteralNode(position, 'azul')
+    expected_position        = Position(1, 1)
+    expected_strip_left      = False
+    expected_strip_right     = True
+    expected_string_value    = 'azul'
+    expected_string_position = Position(1, 1)
 
-    position = Position(1, 1)
-    expected = n.TextFragmentNode(position, string_node, strip_left, strip_right)
     observed = parser.parse_text_fragment()
-    assert expected == observed
+    assert expected_position        == observed.position
+    assert expected_strip_left      == observed.strip_left
+    assert expected_strip_right     == observed.strip_right
     assert observed.content.parent is observed
+    assert expected_string_value    == observed.content.value
+    assert expected_string_position == observed.content.position
 
 def test_parse_text_fragment_returns_node_with_left_and_right_strip():
     stream = '*"azul"*'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    strip_left  = True
-    strip_right = True
-    position    = Position(1, 2)
-    string_node = n.StringLiteralNode(position, 'azul')
+    expected_position        = Position(1, 1)
+    expected_strip_left      = True
+    expected_strip_right     = True
+    expected_string_value    = 'azul'
+    expected_string_position = Position(1, 2)
 
-    position = Position(1, 1)
-    expected = n.TextFragmentNode(position, string_node, strip_left, strip_right)
     observed = parser.parse_text_fragment()
-    assert expected == observed
+    assert expected_position        == observed.position
+    assert expected_strip_left      == observed.strip_left
+    assert expected_strip_right     == observed.strip_right
     assert observed.content.parent is observed
+    assert expected_string_value    == observed.content.value
+    assert expected_string_position == observed.content.position
 
 def test_parse_group_label_returns_node():
     stream = '@group1'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    position = Position(1, 2)
-    name     = n.IdentifierNode(position, 'group1')
+    expected_position      = Position(1, 1)
+    expected_name_position = Position(1, 2)
+    expected_name_value    = 'group1'
 
-    position = Position(1, 1)
-    expected = n.GroupLabelNode(position, name)
     observed = parser.parse_group_label()
-    assert expected == observed
-    assert observed.name.parent is observed
+    assert type(observed)         is n.GroupLabelNode
+    assert expected_position      == observed.position
+    assert type(observed.name)    is n.IdentifierNode
+    assert observed.name.parent   is observed
+    assert expected_name_position == observed.name.position
+    assert expected_name_value    == observed.name.value
 
 def test_parse_anchor_label_returns_node():
-    stream = '#group1'
+    stream = '#ref1'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    position = Position(1, 2)
-    name     = n.IdentifierNode(position, 'group1')
+    expected_position      = Position(1, 1)
+    expected_name_position = Position(1, 2)
+    expected_name_value    = 'ref1'
 
-    position = Position(1, 1)
-    expected = n.AnchorLabelNode(position, name)
     observed = parser.parse_anchor_label()
-    assert expected == observed
-    assert observed.name.parent is observed
+    assert type(observed)         is n.AnchorLabelNode
+    assert expected_position      == observed.position
+    assert type(observed.name)    is n.IdentifierNode
+    assert observed.name.parent   is observed
+    assert expected_name_position == observed.name.position
+    assert expected_name_value    == observed.name.value
 
 def test_parse_link_label_returns_node():
-    stream = '$group1'
+    stream = '$ref2'
     lexer  = Lexer(stream)
     parser = Parser(lexer)
 
-    position = Position(1, 2)
-    name     = n.IdentifierNode(position, 'group1')
+    expected_position      = Position(1, 1)
+    expected_name_position = Position(1, 2)
+    expected_name_value    = 'ref2'
 
-    position = Position(1, 1)
-    expected = n.LinkLabelNode(position, name)
     observed = parser.parse_link_label()
-    assert expected == observed
-    assert observed.name.parent is observed
+    assert type(observed)         is n.LinkLabelNode
+    assert expected_position      == observed.position
+    assert type(observed.name)    is n.IdentifierNode
+    assert observed.name.parent   is observed
+    assert expected_name_position == observed.name.position
+    assert expected_name_value    == observed.name.value
 
 def test_parse_shorthand_block_body_returns_statements():
     stream = ': "o livro";'
@@ -250,7 +266,7 @@ def test_parse_standard_block_body_returns_empty_body():
     assert 0 == len(observed_body)
 
 def test_parse_standard_block_body_returns_multiple_statements():
-    stream = ('{ -- Comment.\n'
+    stream = ('{\n'
               '"O céu"'
               'pred { }'
               '}')
@@ -258,16 +274,13 @@ def test_parse_standard_block_body_returns_multiple_statements():
     parser = Parser(lexer)
 
     observed_body = parser.parse_standard_block_body()
-    assert 3 == len(observed_body)
+    assert 2 == len(observed_body)
 
     observed_statement_1 = observed_body[0]
-    assert type(observed_statement_1) is n.CommentNode
+    assert type(observed_statement_1) is n.TextFragmentNode
 
     observed_statement_2 = observed_body[1]
-    assert type(observed_statement_2) is n.TextFragmentNode
-
-    observed_statement_3 = observed_body[2]
-    assert type(observed_statement_3) is n.BlockNode
+    assert type(observed_statement_2) is n.BlockNode
 
 def test_parse_block_body_returns_node_from_shorthand_syntax():
     stream = ': "Eles" ;'
@@ -363,8 +376,7 @@ def test_parse_block_returns_node_with_all_optional_labels():
     assert observed.body[0].parent is observed
 
 @parametrize('stream,expected',
-             [param('-- Comment.', n.CommentNode,      id='from_comment'),
-              param('*"amarelo"*', n.TextFragmentNode, id='from_text_fragment_with_trim'),
+             [param('*"amarelo"*', n.TextFragmentNode, id='from_text_fragment_with_trim'),
               param('"amarelo"',   n.TextFragmentNode, id='from_text_fragment_without_trim'),
               param('pred {  }',   n.BlockNode,        id='from_block'),])
 def test_parse_statement_returns_node(stream, expected):
